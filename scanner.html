@@ -4,23 +4,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
-    body { margin: 0; padding: 0; background: #fff; }
+    body { margin: 0; padding: 8px; background: #fff; font-family: Arial, sans-serif; }
     #qr-reader { width: 100%; }
+    h3 { text-align: center; color: #333; }
   </style>
 </head>
 <body>
+  <h3>Point camera at QR code</h3>
   <div id="qr-reader"></div>
   <script>
     const scanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
     scanner.render(
       function(decodedText) {
-        window.parent.postMessage({ qrResult: decodedText }, '*');
         scanner.clear();
-        document.getElementById('qr-reader').innerHTML = '<p style="padding:16px">✅ Scanned! Returning result...</p>';
+        document.getElementById('qr-reader').innerHTML =
+          '<p style="padding:16px;text-align:center">✅ Scanned! Closing...</p>';
+
+       
+        if (window.opener) {
+          window.opener.postMessage({ qrResult: decodedText }, '*');
+        }
+
+   
+        setTimeout(() => window.close(), 1000);
       },
       function() {}
     );
   </script>
 </body>
 </html>
-```
