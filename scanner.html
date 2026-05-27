@@ -20,13 +20,7 @@
         document.getElementById('qr-reader').innerHTML =
           '<p style="padding:16px;text-align:center">✅ Scanned! Closing...</p>';
 
-       
-        if (window.opener) {
-          window.opener.postMessage({ qrResult: decodedText }, '*');
-        }
-
-   
-        setTimeout(() => window.close(), 1000);
+        window.parent.postMessage({ qrResult: decodedText }, '*');
       },
       function() {}
     );
