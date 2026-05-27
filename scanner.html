@@ -19,10 +19,16 @@
   scanner.clear();
   document.getElementById('qr-reader').innerHTML =
     '<p style="padding:16px;text-align:center">✅ Scanned! Closing...</p>';
-  localStorage.setItem('qrResult', decodedText);
-  localStorage.setItem('qrTimestamp', Date.now());
+  
+  var params = new URLSearchParams(window.location.search);
+  var returnUrl = params.get('returnUrl');
+  
+  if (returnUrl) {
+    // Redirect parent app with result in URL hash
+    window.location.href = returnUrl + '#qr=' + encodeURIComponent(decodedText);
+  }
   setTimeout(() => window.close(), 800);
-},
+}
       function() {}
     );
   </script>
