@@ -2,35 +2,71 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <meta http-equiv="Permissions-Policy" content="camera=*">
   <style>
-    body { margin: 0; padding: 8px; background: #fff; font-family: Arial, sans-serif; }
-    #qr-reader { width: 100%; }
-    h3 { text-align: center; color: #333; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 16px; }
+    h3 { margin: 16px 0 12px; font-size: 16px; color: #ccc; }
+    #qr-reader { width: 100%; max-width: 400px; }
+    #qr-reader video { border-radius: 12px; }
+    #status { margin-top: 16px; font-size: 14px; color: #aaa; text-align: center; }
+    #error { margin-top: 16px; font-size: 13px; color: #f87171; text-align: center; display: none; padding: 10px; background: #1f0000; border-radius: 8px; max-width: 400px; }
   </style>
 </head>
 <body>
   <h3>Point camera at QR code</h3>
   <div id="qr-reader"></div>
+  <div id="status">Initialising camera...</div>
+  <div id="error"></div>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
-    const scanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
-    scanner.render(
-      function(decodedText) {
-  scanner.clear();
-  document.getElementById('qr-reader').innerHTML =
-    '<p style="padding:16px;text-align:center">✅ Scanned! Closing...</p>';
-  
-  var params = new URLSearchParams(window.location.search);
-  var returnUrl = params.get('returnUrl');
-  
-  if (returnUrl) {
-    // Redirect parent app with result in URL hash
-    window.location.href = returnUrl + '#qr=' + encodeURIComponent(decodedText);
-  }
-  setTimeout(() => window.close(), 800);
-}
-      function() {}
-    );
+    var statusEl = document.getElementById('status');
+    var errorEl  = document.getElementById('error');
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+      statusEl.textContent = 'Camera error — see below';
+    }
+
+    function onScanSuccess(decodedText) {
+      statusEl.textContent = 'Scanned! Sending result...';
+      if (window.opener) {
+        window.opener.postMessage({ qrResult: decodedText }, '*');
+      }
+      setTimeout(function() { window.close(); }, 800);
+    }
+
+    window.addEventListener('load', function() {
+      if (typeof Html5QrcodeScanner === 'undefined') {
+        showError('Failed to load QR library. Check your internet connection.');
+        return;
+      }
+
+      try {
+        var scanner = new Html5QrcodeScanner(
+          'qr-reader',
+          { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+          false
+        );
+        scanner.render(
+          function(decodedText) {
+            scanner.clear().then(function() {
+              onScanSuccess(decodedText);
+            }).catch(function() {
+              onScanSuccess(decodedText);
+            });
+          },
+          function(err) {
+            // scan errors are normal, ignore
+          }
+        );
+        statusEl.textContent = 'Camera ready — point at QR code';
+      } catch(e) {
+        showError('Scanner init failed: ' + e.message);
+      }
+    });
   </script>
 </body>
 </html>
