@@ -17,7 +17,6 @@
   <div id="status">Initialising...</div>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
-    // Get the return URL from query string
     var params = new URLSearchParams(window.location.search);
     var returnUrl = params.get('returnUrl');
 
@@ -38,8 +37,14 @@
             status.textContent = 'Scanned! Returning to app...';
             scanner.clear().catch(function(){}).finally(function() {
               if (returnUrl) {
-                // Redirect back to the app with the QR result in the URL
-                window.location.href = returnUrl + '&qr=' + encodeURIComponent(decodedText);
+                // Redirect the opener (parent app) with the QR result
+                if (window.opener && !window.opener.closed) {
+                  window.opener.location.href = returnUrl + '&qr=' + encodeURIComponent(decodedText);
+                  window.close();
+                } else {
+                  // Fallback: redirect self
+                  window.location.href = returnUrl + '&qr=' + encodeURIComponent(decodedText);
+                }
               }
             });
           },
