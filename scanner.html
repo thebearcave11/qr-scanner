@@ -40,7 +40,7 @@
                 // Redirect the opener (parent app) with the QR result
                 if (window.opener && !window.opener.closed) {
                   window.opener.location.href = returnUrl + '?qr=' + encodeURIComponent(decodedText);
-                  window.close();
+                  setTimeout(function() { window.close(); }, 300);
                 } else {
                   // Fallback: redirect self
                   window.location.href = returnUrl + '?qr=' + encodeURIComponent(decodedText);
