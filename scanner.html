@@ -5,66 +5,43 @@
   <meta http-equiv="Permissions-Policy" content="camera=*">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #111; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 16px; }
-    h3 { margin: 16px 0 12px; font-size: 16px; color: #ccc; }
-    #qr-reader { width: 100%; max-width: 400px; }
-    #qr-reader video { border-radius: 12px; }
-    #status { margin-top: 16px; font-size: 14px; color: #aaa; text-align: center; }
-    #error { margin-top: 16px; font-size: 13px; color: #f87171; text-align: center; display: none; padding: 10px; background: #1f0000; border-radius: 8px; max-width: 400px; }
+    body { background: #111; display: flex; flex-direction: column; align-items: center; padding: 16px; min-height: 100vh; }
+    h3 { color: #ccc; font-family: Arial, sans-serif; font-size: 15px; margin: 12px 0; }
+    #qr-reader { width: 100%; max-width: 380px; }
+    #status { color: #aaa; font-family: Arial, sans-serif; font-size: 13px; margin-top: 12px; text-align: center; }
   </style>
 </head>
 <body>
   <h3>Point camera at QR code</h3>
   <div id="qr-reader"></div>
-  <div id="status">Initialising camera...</div>
-  <div id="error"></div>
-
+  <div id="status">Initialising...</div>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
-    var statusEl = document.getElementById('status');
-    var errorEl  = document.getElementById('error');
-
-    function showError(msg) {
-      errorEl.textContent = msg;
-      errorEl.style.display = 'block';
-      statusEl.textContent = 'Camera error — see below';
-    }
-
-    function onScanSuccess(decodedText) {
-      statusEl.textContent = 'Scanned! Sending result...';
-      if (window.opener) {
-        window.opener.postMessage({ qrResult: decodedText }, '*');
-      }
-      setTimeout(function() { window.close(); }, 800);
-    }
-
     window.addEventListener('load', function() {
+      var status = document.getElementById('status');
       if (typeof Html5QrcodeScanner === 'undefined') {
-        showError('Failed to load QR library. Check your internet connection.');
+        status.textContent = 'Failed to load QR library.';
         return;
       }
-
       try {
         var scanner = new Html5QrcodeScanner(
           'qr-reader',
-          { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
           false
         );
         scanner.render(
           function(decodedText) {
-            scanner.clear().then(function() {
-              onScanSuccess(decodedText);
-            }).catch(function() {
-              onScanSuccess(decodedText);
+            status.textContent = 'Scanned!';
+            scanner.clear().catch(function(){}).finally(function() {
+              // Send to parent iframe (Apps Script web app)
+              window.parent.postMessage({ qrResult: decodedText }, '*');
             });
           },
-          function(err) {
-            // scan errors are normal, ignore
-          }
+          function() {}
         );
-        statusEl.textContent = 'Camera ready — point at QR code';
+        status.textContent = 'Camera ready';
       } catch(e) {
-        showError('Scanner init failed: ' + e.message);
+        status.textContent = 'Error: ' + e.message;
       }
     });
   </script>
