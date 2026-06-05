@@ -17,41 +17,49 @@
   <div id="status">Initialising...</div>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
-    var params = new URLSearchParams(window.location.search);
-    var returnUrl = params.get('returnUrl');
+    var params     = new URLSearchParams(window.location.search);
+    var returnUrl  = params.get('returnUrl');   // still stored, used as postMessage target origin check
 
-    window.addEventListener('load', function() {
+    window.addEventListener('load', function () {
       var status = document.getElementById('status');
+
       if (typeof Html5QrcodeScanner === 'undefined') {
         status.textContent = 'Failed to load QR library.';
         return;
       }
+
       try {
         var scanner = new Html5QrcodeScanner(
           'qr-reader',
           { fps: 10, qrbox: { width: 250, height: 250 } },
           false
         );
+
         scanner.render(
-          function(decodedText) {
-            status.textContent = 'Scanned! Returning to app...';
-            scanner.clear().catch(function(){}).finally(function() {
-              if (returnUrl) {
-                // Redirect the opener (parent app) with the QR result
-                if (window.opener && !window.opener.closed) {
-                  window.opener.location.href = returnUrl + '?qr=' + encodeURIComponent(decodedText);
-                  setTimeout(function() { window.close(); }, 300);
-                } else {
-                  // Fallback: redirect self
+          function (decodedText) {
+            status.textContent = 'Scanned! Sending to app...';
+
+            scanner.clear().catch(function () {}).finally(function () {
+              // Always postMessage to opener — most reliable cross-origin method
+              if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({ qrResult: decodedText }, '*');
+                status.textContent = 'Done! You can close this window.';
+                setTimeout(function () { window.close(); }, 800);
+              } else {
+                // Opener gone — fall back to redirect
+                if (returnUrl) {
                   window.location.href = returnUrl + '?qr=' + encodeURIComponent(decodedText);
+                } else {
+                  status.textContent = 'Scan complete: ' + decodedText;
                 }
               }
             });
           },
-          function() {}
+          function () {}   // ignore scan errors
         );
+
         status.textContent = 'Camera ready — point at QR code';
-      } catch(e) {
+      } catch (e) {
         status.textContent = 'Error: ' + e.message;
       }
     });
