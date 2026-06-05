@@ -3,7 +3,6 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Permissions-Policy" content="camera=*">
-  <meta http-equiv="Feature-Policy" content="camera *">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #111; display: flex; flex-direction: column; align-items: center; padding: 16px; min-height: 100vh; }
@@ -18,6 +17,10 @@
   <div id="status">Initialising...</div>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
+    // Get the return URL from query string
+    var params = new URLSearchParams(window.location.search);
+    var returnUrl = params.get('returnUrl');
+
     window.addEventListener('load', function() {
       var status = document.getElementById('status');
       if (typeof Html5QrcodeScanner === 'undefined') {
@@ -32,15 +35,17 @@
         );
         scanner.render(
           function(decodedText) {
-            status.textContent = 'Scanned!';
+            status.textContent = 'Scanned! Returning to app...';
             scanner.clear().catch(function(){}).finally(function() {
-              // Send to parent iframe (Apps Script web app)
-              window.parent.postMessage({ qrResult: decodedText }, '*');
+              if (returnUrl) {
+                // Redirect back to the app with the QR result in the URL
+                window.location.href = returnUrl + '&qr=' + encodeURIComponent(decodedText);
+              }
             });
           },
           function() {}
         );
-        status.textContent = 'Camera ready';
+        status.textContent = 'Camera ready — point at QR code';
       } catch(e) {
         status.textContent = 'Error: ' + e.message;
       }
