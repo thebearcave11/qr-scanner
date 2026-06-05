@@ -17,52 +17,43 @@
   <div id="status">Initialising...</div>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
-    var params     = new URLSearchParams(window.location.search);
-    var returnUrl  = params.get('returnUrl');   // still stored, used as postMessage target origin check
+    var params    = new URLSearchParams(window.location.search);
+    var returnUrl = params.get('returnUrl');
 
     window.addEventListener('load', function () {
       var status = document.getElementById('status');
-
       if (typeof Html5QrcodeScanner === 'undefined') {
-        status.textContent = 'Failed to load QR library.';
-        return;
+        status.textContent = 'Failed to load QR library.'; return;
       }
-
       try {
         var scanner = new Html5QrcodeScanner(
           'qr-reader',
           { fps: 10, qrbox: { width: 250, height: 250 } },
           false
         );
-
         scanner.render(
           function (decodedText) {
-            status.textContent = 'Scanned! Sending to app...';
-
-            scanner.clear().catch(function () {}).finally(function () {
-              // Always postMessage to opener — most reliable cross-origin method
+            status.textContent = 'Scanned! Returning to app...';
+            scanner.clear().catch(function(){}).finally(function() {
               if (window.opener && !window.opener.closed) {
+                // Primary: postMessage to opener
                 window.opener.postMessage({ qrResult: decodedText }, '*');
-                status.textContent = 'Done! You can close this window.';
-                setTimeout(function () { window.close(); }, 800);
+                setTimeout(function() { window.close(); }, 800);
+              } else if (returnUrl) {
+                // Fallback: redirect using hash (GAS won't strip it)
+                window.location.href = returnUrl + '#qr=' + encodeURIComponent(decodedText);
               } else {
-                // Opener gone — fall back to redirect
-                if (returnUrl) {
-                  window.location.href = returnUrl + '?qr=' + encodeURIComponent(decodedText);
-                } else {
-                  status.textContent = 'Scan complete: ' + decodedText;
-                }
+                status.textContent = 'Scan complete: ' + decodedText;
               }
             });
           },
-          function () {}   // ignore scan errors
+          function() {}
         );
-
         status.textContent = 'Camera ready — point at QR code';
-      } catch (e) {
+      } catch(e) {
         status.textContent = 'Error: ' + e.message;
       }
     });
-  </script>
+</script>
 </body>
 </html>
